@@ -23,8 +23,9 @@ import sounddevice
 import threading
 from chunk import Chunk
 import struct
-import rtmidi_python as rtmidi
+import rtmidi
 import samplerbox_audio
+import traceback
 
 #########################################
 # SLIGHT MODIFICATION OF PYTHON'S WAVE MODULE
@@ -32,6 +33,8 @@ import samplerbox_audio
 #########################################
 
 class waveread(wave.Wave_read):
+    pass
+'''
     def initfp(self, file):
         self._convert = None
         self._soundpos = 0
@@ -49,8 +52,8 @@ class waveread(wave.Wave_read):
             self._data_seek_needed = 1
             try:
                 chunk = Chunk(self._file, bigendian=0)
-            except EOFError:
-                break
+            except EOFError as e:
+                print('exception:', traceback.print_exception(e))
             chunkname = chunk.getname()
             if chunkname == b'fmt ':
                 self._read_fmt_chunk(chunk)
@@ -81,7 +84,7 @@ class waveread(wave.Wave_read):
 
     def getloops(self):
         return self._loops
-
+'''
 #########################################
 # MIXER CLASSES
 #
@@ -101,8 +104,8 @@ class PlayingSound:
     def stop(self):
         try:
             playingsounds.remove(self)
-        except:
-            pass
+        except Exception as e:
+            print('exception:', traceback.print_exception(e))
 
 class Sound:
     def __init__(self, filename, midinote, velocity):
@@ -110,7 +113,8 @@ class Sound:
         self.fname = filename
         self.midinote = midinote
         self.velocity = velocity
-        if wf.getloops():
+        #if wf.getloops():
+        if False:
             self.loop = wf.getloops()[0][0]
             self.nframes = wf.getloops()[0][1] + 2
         else:
@@ -153,6 +157,7 @@ globaltranspose = 0
 #########################################
 
 def AudioCallback(outdata, frame_count, time_info, status):
+
     global playingsounds
     rmlist = []
     playingsounds = playingsounds[-MAX_POLYPHONY:]
@@ -160,47 +165,53 @@ def AudioCallback(outdata, frame_count, time_info, status):
     for e in rmlist:
         try:
             playingsounds.remove(e)
-        except:
-            pass
+        except Exception as e:
+            print('exception:', traceback.print_exception(e))
     b *= globalvolume
     outdata[:] = b.reshape(outdata.shape)
 
 def MidiCallback(message, time_stamp):
-    global playingnotes, sustain, sustainplayingnotes
-    global preset
-    messagetype = message[0] >> 4
-    messagechannel = (message[0] & 15) + 1
-    note = message[1] if len(message) > 1 else None
-    midinote = note
-    velocity = message[2] if len(message) > 2 else None
-    if messagetype == 9 and velocity == 0:
-        messagetype = 8
-    if messagetype == 9:    # Note on
-        midinote += globaltranspose
-        try:
-            playingnotes.setdefault(midinote, []).append(samples[midinote, velocity].play(midinote))
-        except:
-            pass
-    elif messagetype == 8:  # Note off
-        midinote += globaltranspose
-        if midinote in playingnotes:
-            for n in playingnotes[midinote]:
-                if sustain:
-                    sustainplayingnotes.append(n)
-                else:
-                    n.fadeout(50)
-            playingnotes[midinote] = []
-    elif messagetype == 12:  # Program change
-        print('Program change ' + str(note))
-        preset = note
-        LoadSamples()
-    elif (messagetype == 11) and (note == 64) and (velocity < 64):  # sustain pedal off
-        for n in sustainplayingnotes:
-            n.fadeout(50)
-        sustainplayingnotes = []
-        sustain = False
-    elif (messagetype == 11) and (note == 64) and (velocity >= 64):  # sustain pedal on
-        sustain = True
+    try:
+        print('midi cb', message)
+        message = message[0]
+        global playingnotes, sustain, sustainplayingnotes
+        global preset
+        messagetype = message[0] >> 4
+        messagechannel = (message[0] & 15) + 1
+        note = message[1] if len(message) > 1 else None
+        midinote = note
+        velocity = message[2] if len(message) > 2 else None
+        print('midi cb type', messagetype)
+        if messagetype == 9 and velocity == 0:
+            messagetype = 8
+        if messagetype == 9:    # Note on
+            midinote += globaltranspose
+            try:
+                playingnotes.setdefault(midinote, []).append(samples[midinote, velocity].play(midinote))
+            except Exception as e:
+                print('exception:', traceback.print_exception(e))
+        elif messagetype == 8:  # Note off
+            midinote += globaltranspose
+            if midinote in playingnotes:
+                for n in playingnotes[midinote]:
+                    if sustain:
+                        sustainplayingnotes.append(n)
+                    else:
+                        n.fadeout(50)
+                playingnotes[midinote] = []
+        elif messagetype == 12:  # Program change
+            print('Program change ' + str(note))
+            preset = note
+            LoadSamples()
+        elif (messagetype == 11) and (note == 64) and (velocity < 64):  # sustain pedal off
+            for n in sustainplayingnotes:
+                n.fadeout(50)
+            sustainplayingnotes = []
+            sustain = False
+        elif (messagetype == 11) and (note == 64) and (velocity >= 64):  # sustain pedal on
+            sustain = True
+    except Exception as e:
+        print('exception:', traceback.print_exception(e))
 
 #########################################
 # LOAD SAMPLES
@@ -299,7 +310,7 @@ def ActuallyLoad():
             for velocity in range(128):
                 try:
                     samples[midinote, velocity] = samples[midinote-1, velocity]
-                except:
+                except Exception as e:
                     pass
     if len(initial_keys) > 0:
         print('Preset loaded: ' + str(preset))
@@ -408,7 +419,7 @@ if USE_SERIALPORT_MIDI:
 #
 #########################################
 
-preset = 0
+preset = DEFAULT_SOUNDBANK
 LoadSamples()
 
 #########################################
@@ -424,14 +435,15 @@ if USE_SYSTEMLED:
 # MAIN LOOP
 #########################################
 
-midi_in = [rtmidi.MidiIn(b'in')]
+midi_in = [rtmidi.MidiIn()]
 previous = []
 while True:
-    for port in midi_in[0].ports:
-        if port not in previous and b'Midi Through' not in port:
-            midi_in.append(rtmidi.MidiIn(b'in'))
-            midi_in[-1].callback = MidiCallback
-            midi_in[-1].open_port(port)
+    all_ports = midi_in[0].get_ports()
+    for num_port,port in enumerate(all_ports):
+        if port not in previous and 'Midi Through' not in port:
+            midi_in.append(rtmidi.MidiIn())
+            midi_in[-1].set_callback(MidiCallback)
+            midi_in[-1].open_port(num_port)
             print('Opened MIDI: ' + str(port))
-    previous = midi_in[0].ports
+    previous = all_ports
     time.sleep(2)

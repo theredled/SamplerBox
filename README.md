@@ -1,4 +1,10 @@
+FORK NOTE: 
+
+* makes Samplebox compatible with Python 3.9+, including using `python-rtmidi` module instead of `rtmidi-python`.
+
+
 # SamplerBox
+
 
 *Update: [Remove drums from song](https://www.yellownoiseaudio.com) with the VST DrumExtract!*
 
@@ -24,7 +30,7 @@ You can use a ready-to-use ISO image from the [Releases](https://github.com/jose
     sudo apt update
     sudo apt -y install git python3-pip python3-smbus python3-numpy libportaudio2 
     sudo apt -y install raspberrypi-kernel  # quite long to install, do it only if necessary, it solves a "no sound before 25 second on boot" problem
-    sudo pip3 install cython rtmidi-python cffi sounddevice pyserial
+    sudo pip3 install cython python-rtmidi cffi sounddevice pyserial
     ~~~
     
 2. Download SamplerBox and build it with:
