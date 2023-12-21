@@ -397,7 +397,6 @@ if config.USE_SERIALPORT_MIDI:
             MidiCallback(message, None)
 
 
-#def init():
 #    global preset
     #########################################
     # OPEN AUDIO DEVICE
@@ -462,3 +461,6 @@ if config.USE_SYSTEMLED:
 # MIDI DEVICES DETECTION
 # MAIN LOOP
 #########################################
+
+def init():
+    pass
