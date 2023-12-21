@@ -11,6 +11,8 @@
 import rtmidi, time
 import src.samplerbox as samplerbox
 
+samplerbox.init()
+
 midi_in = [rtmidi.MidiIn()]
 previous = []
 while True:
@@ -23,3 +25,5 @@ while True:
             print('Opened MIDI: ' + str(port))
     previous = all_ports
     time.sleep(2)
+
+

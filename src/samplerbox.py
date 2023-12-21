@@ -1,10 +1,8 @@
-
 #########################################
 # IMPORT
 # MODULES
 #########################################
 
-from SamplerBox.src.config import *
 import wave
 import time
 import numpy
@@ -12,16 +10,28 @@ import os
 import re
 import sounddevice
 import threading
-import samplerbox_audio
 import traceback
+
+from . import samplerbox_audio
+from . import config
+
+if config.USE_SERIALPORT_MIDI:
+    import serial
+if config.USE_BUTTONS:
+    import RPi.GPIO as GPIO
+if config.USE_I2C_7SEGMENTDISPLAY:
+    import smbus
+
 
 #########################################
 # SLIGHT MODIFICATION OF PYTHON'S WAVE MODULE
 # TO READ CUE MARKERS & LOOP MARKERS
 #########################################
 
-class waveread(wave.Wave_read):
+class WaveReader(wave.Wave_read):
     pass
+
+
 '''
     def initfp(self, file):
         self._convert = None
@@ -73,6 +83,8 @@ class waveread(wave.Wave_read):
     def getloops(self):
         return self._loops
 '''
+
+
 #########################################
 # MIXER CLASSES
 #
@@ -95,13 +107,14 @@ class PlayingSound:
         except Exception as e:
             print('exception:', traceback.print_exception(e))
 
+
 class Sound:
     def __init__(self, filename, midinote, velocity):
-        wf = waveread(filename)
+        wf = WaveReader(filename)
         self.fname = filename
         self.midinote = midinote
         self.velocity = velocity
-        #if wf.getloops():
+        # if wf.getloops():
         if False:
             self.loop = wf.getloops()[0][0]
             self.nframes = wf.getloops()[0][1] + 2
@@ -120,24 +133,26 @@ class Sound:
         if sampwidth == 2:
             npdata = numpy.frombuffer(data, dtype=numpy.int16)
         elif sampwidth == 3:
-            npdata = samplerbox_audio.binary24_to_int16(data, len(data)//3)
+            npdata = samplerbox_audio.binary24_to_int16(data, len(data) // 3)
         if numchan == 1:
             npdata = numpy.repeat(npdata, 2)
         return npdata
 
+
 FADEOUTLENGTH = 30000
-FADEOUT = numpy.linspace(1., 0., FADEOUTLENGTH)            # by default, float64
+FADEOUT = numpy.linspace(1., 0., FADEOUTLENGTH)  # by default, float64
 FADEOUT = numpy.power(FADEOUT, 6)
 FADEOUT = numpy.append(FADEOUT, numpy.zeros(FADEOUTLENGTH, numpy.float32)).astype(numpy.float32)
-SPEED = numpy.power(2, numpy.arange(0.0, 84.0)/12).astype(numpy.float32)
+SPEED = numpy.power(2, numpy.arange(0.0, 84.0) / 12).astype(numpy.float32)
 
 samples = {}
 playingnotes = {}
 sustainplayingnotes = []
 sustain = False
 playingsounds = []
-globalvolume = 10 ** (-12.0/20)  # -12dB default global volume
+globalvolume = 10 ** (-12.0 / 20)  # -12dB default global volume
 globaltranspose = 0
+preset = None
 
 #########################################
 # AUDIO AND MIDI CALLBACKS
@@ -145,10 +160,9 @@ globaltranspose = 0
 #########################################
 
 def AudioCallback(outdata, frame_count, time_info, status):
-
     global playingsounds
     rmlist = []
-    playingsounds = playingsounds[-MAX_POLYPHONY:]
+    playingsounds = playingsounds[-config.MAX_POLYPHONY:]
     b = samplerbox_audio.mixaudiobuffers(playingsounds, rmlist, frame_count, FADEOUT, FADEOUTLENGTH, SPEED)
     for e in rmlist:
         try:
@@ -158,7 +172,8 @@ def AudioCallback(outdata, frame_count, time_info, status):
     b *= globalvolume
     outdata[:] = b.reshape(outdata.shape)
 
-def MidiCallback(message, time_stamp = None):
+
+def MidiCallback(message, time_stamp=None):
     try:
         print('midi cb', message)
         message = message[0]
@@ -172,7 +187,7 @@ def MidiCallback(message, time_stamp = None):
         print('midi cb type', messagetype)
         if messagetype == 9 and velocity == 0:
             messagetype = 8
-        if messagetype == 9:    # Note on
+        if messagetype == 9:  # Note on
             midinote += globaltranspose
             try:
                 playingnotes.setdefault(midinote, []).append(samples[midinote, velocity].play(midinote))
@@ -201,6 +216,7 @@ def MidiCallback(message, time_stamp = None):
     except Exception as e:
         print('exception:', traceback.print_exception(e))
 
+
 #########################################
 # LOAD SAMPLES
 #
@@ -208,6 +224,7 @@ def MidiCallback(message, time_stamp = None):
 
 LoadingThread = None
 LoadingInterrupt = False
+
 
 def LoadSamples():
     global LoadingThread
@@ -223,7 +240,9 @@ def LoadSamples():
     LoadingThread.daemon = True
     LoadingThread.start()
 
+
 NOTES = ["c", "c#", "d", "d#", "e", "f", "f#", "g", "g#", "a", "a#", "b"]
+
 
 def ActuallyLoad():
     global preset
@@ -232,10 +251,12 @@ def ActuallyLoad():
     global globalvolume, globaltranspose
     playingsounds = []
     samples = {}
-    globalvolume = 10 ** (-12.0/20)  # -12dB default global volume
+    globalvolume = 10 ** (-12.0 / 20)  # -12dB default global volume
     globaltranspose = 0
-    samplesdir = SAMPLES_DIR if os.listdir(SAMPLES_DIR) else '.'      # use current folder (containing 0 Saw) if no user media containing samples has been found
-    basename = next((f for f in os.listdir(samplesdir) if f.startswith("%d " % preset)), None)      # or next(glob.iglob("blah*"), None)
+    samplesdir = config.SAMPLES_DIR if os.listdir(
+        config.SAMPLES_DIR) else '.'  # use current folder (containing 0 Saw) if no user media containing samples has been found
+    basename = next((f for f in os.listdir(samplesdir) if f.startswith("%d " % preset)),
+                    None)  # or next(glob.iglob("blah*"), None)
     if basename:
         dirname = os.path.join(samplesdir, basename)
     if not basename:
@@ -249,7 +270,7 @@ def ActuallyLoad():
         with open(definitionfname, 'r') as definitionfile:
             for i, pattern in enumerate(definitionfile):
                 try:
-                    if r'%%volume' in pattern:        # %%paramaters are global parameters
+                    if r'%%volume' in pattern:  # %%paramaters are global parameters
                         globalvolume *= 10 ** (float(pattern.split('=')[1].strip()) / 20)
                         continue
                     if r'%%transpose' in pattern:
@@ -257,11 +278,15 @@ def ActuallyLoad():
                         continue
                     defaultparams = {'midinote': '0', 'velocity': '127', 'notename': ''}
                     if len(pattern.split(',')) > 1:
-                        defaultparams.update(dict([item.split('=') for item in pattern.split(',', 1)[1].replace(' ', '').replace('%', '').split(',')]))
+                        defaultparams.update(dict([item.split('=') for item in
+                                                   pattern.split(',', 1)[1].replace(' ', '').replace('%', '').split(
+                                                       ',')]))
                     pattern = pattern.split(',')[0]
                     pattern = re.escape(pattern.strip())  # note for Python 3.7+: "%" is no longer escaped with "\"
-                    pattern = pattern.replace(r"%midinote", r"(?P<midinote>\d+)").replace(r"%velocity", r"(?P<velocity>\d+)")\
-                                     .replace(r"%notename", r"(?P<notename>[A-Ga-g]#?[0-9])").replace(r"\*", r".*?").strip()    # .*? => non greedy
+                    pattern = pattern.replace(r"%midinote", r"(?P<midinote>\d+)").replace(r"%velocity",
+                                                                                          r"(?P<velocity>\d+)") \
+                        .replace(r"%notename", r"(?P<notename>[A-Ga-g]#?[0-9])").replace(r"\*",
+                                                                                         r".*?").strip()  # .*? => non greedy
                     for fname in os.listdir(dirname):
                         if LoadingInterrupt:
                             return
@@ -272,10 +297,10 @@ def ActuallyLoad():
                             velocity = int(info.get('velocity', defaultparams['velocity']))
                             notename = info.get('notename', defaultparams['notename'])
                             if notename:
-                                midinote = NOTES.index(notename[:-1].lower()) + (int(notename[-1])+2) * 12
+                                midinote = NOTES.index(notename[:-1].lower()) + (int(notename[-1]) + 2) * 12
                             samples[midinote, velocity] = Sound(os.path.join(dirname, fname), midinote, velocity)
                 except:
-                    print("Error in definition file, skipping line %s." % (i+1))
+                    print("Error in definition file, skipping line %s." % (i + 1))
     else:
         for midinote in range(0, 127):
             if LoadingInterrupt:
@@ -297,7 +322,7 @@ def ActuallyLoad():
         if not lastvelocity:
             for velocity in range(128):
                 try:
-                    samples[midinote, velocity] = samples[midinote-1, velocity]
+                    samples[midinote, velocity] = samples[midinote - 1, velocity]
                 except Exception as e:
                     pass
     if len(initial_keys) > 0:
@@ -307,27 +332,11 @@ def ActuallyLoad():
         print('Preset empty: ' + str(preset))
         display("E%03d" % preset)
 
-#########################################
-# OPEN AUDIO DEVICE
-#
-#########################################
 
-try:
-    sd = sounddevice.OutputStream(device=AUDIO_DEVICE_ID, blocksize=512, samplerate=44100, channels=2, dtype='int16', callback=AudioCallback)
-    sd.start()
-    print('Opened audio device #%i' % AUDIO_DEVICE_ID)
-except:
-    print('Invalid audio device #%i' % AUDIO_DEVICE_ID)
-    exit(1)
-
-#########################################
-# BUTTONS THREAD (RASPBERRY PI GPIO)
-#
-#########################################
-
-if USE_BUTTONS:
-    import RPi.GPIO as GPIO
+if config.USE_BUTTONS:
     lastbuttontime = 0
+
+
     def Buttons():
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -348,20 +357,13 @@ if USE_BUTTONS:
                     preset = 0
                 LoadSamples()
             time.sleep(0.020)
-    ButtonsThread = threading.Thread(target=Buttons)
-    ButtonsThread.daemon = True
-    ButtonsThread.start()
 
-#########################################
-# 7-SEGMENT DISPLAY
-#
-#########################################
+if config.USE_I2C_7SEGMENTDISPLAY:  # requires: 1) i2c-dev in /etc/modules and 2) dtparam=i2c_arm=on in /boot/config.txt
+    bus = smbus.SMBus(1)  # using I2C
 
-if USE_I2C_7SEGMENTDISPLAY:  # requires: 1) i2c-dev in /etc/modules and 2) dtparam=i2c_arm=on in /boot/config.txt
-    import smbus
-    bus = smbus.SMBus(1)     # using I2C
+
     def display(s):
-        for k in '\x76\x79\x00' + s:     # position cursor at 0
+        for k in '\x76\x79\x00' + s:  # position cursor at 0
             try:
                 bus.write_byte(0x71, ord(k))
             except:
@@ -370,20 +372,14 @@ if USE_I2C_7SEGMENTDISPLAY:  # requires: 1) i2c-dev in /etc/modules and 2) dtpar
                 except:
                     pass
             time.sleep(0.002)
-    display('----')
-    time.sleep(0.5)
 else:
     def display(s):
         pass
 
-#########################################
-# MIDI IN via SERIAL PORT
-#
-#########################################
-
-if USE_SERIALPORT_MIDI:
-    import serial
+if config.USE_SERIALPORT_MIDI:
     ser = serial.Serial('/dev/ttyAMA0', baudrate=31250)
+
+
     def MidiSerialCallback():
         message = [0, 0, 0]
         while True:
@@ -391,34 +387,78 @@ if USE_SERIALPORT_MIDI:
             while i < 3:
                 data = ord(ser.read(1))  # read a byte
                 if data >> 7 != 0:
-                    i = 0      # status byte!   this is the beginning of a midi message: http://www.midi.org/techspecs/midimessages.php
+                    i = 0  # status byte!   this is the beginning of a midi message: http://www.midi.org/techspecs/midimessages.php
                 message[i] = data
                 i += 1
-                if i == 2 and message[0] >> 4 == 12:  # program change: don't wait for a third byte: it has only 2 bytes
+                if i == 2 and message[
+                    0] >> 4 == 12:  # program change: don't wait for a third byte: it has only 2 bytes
                     message[2] = 0
                     i = 3
             MidiCallback(message, None)
-    MidiThread = threading.Thread(target=MidiSerialCallback)
-    MidiThread.daemon = True
-    MidiThread.start()
 
-#########################################
-# LOAD FIRST SOUNDBANK
-#
-#########################################
 
-preset = DEFAULT_SOUNDBANK
-LoadSamples()
+def init():
+    global preset
+    #########################################
+    # OPEN AUDIO DEVICE
+    #
+    #########################################
 
-#########################################
-# SYSTEM LED
-#
-#########################################
-if USE_SYSTEMLED:
-    os.system("modprobe ledtrig_heartbeat")
-    os.system("echo heartbeat >/sys/class/leds/led0/trigger")
+    try:
+        sd = sounddevice.OutputStream(device=config.AUDIO_DEVICE_ID, blocksize=512, samplerate=44100, channels=2,
+                                      dtype='int16', callback=AudioCallback)
+        sd.start()
+        print('Opened audio device #%i' % config.AUDIO_DEVICE_ID)
+    except:
+        print('Invalid audio device #%i' % config.AUDIO_DEVICE_ID)
+        exit(1)
 
-#########################################
-# MIDI DEVICES DETECTION
-# MAIN LOOP
-#########################################
+    #########################################
+    # BUTTONS THREAD (RASPBERRY PI GPIO)
+    #
+    #########################################
+
+    if config.USE_BUTTONS:
+        ButtonsThread = threading.Thread(target=Buttons)
+        ButtonsThread.daemon = True
+        ButtonsThread.start()
+
+    #########################################
+    # 7-SEGMENT DISPLAY
+    #
+    #########################################
+
+    if config.USE_I2C_7SEGMENTDISPLAY:  # requires: 1) i2c-dev in /etc/modules and 2) dtparam=i2c_arm=on in /boot/config.txt
+        display('----')
+        time.sleep(0.5)
+
+    #########################################
+    # MIDI IN via SERIAL PORT
+    #
+    #########################################
+
+    if config.USE_SERIALPORT_MIDI:
+        MidiThread = threading.Thread(target=MidiSerialCallback)
+        MidiThread.daemon = True
+        MidiThread.start()
+
+    #########################################
+    # LOAD FIRST SOUNDBANK
+    #
+    #########################################
+
+    preset = config.DEFAULT_SOUNDBANK
+    LoadSamples()
+
+    #########################################
+    # SYSTEM LED
+    #
+    #########################################
+    if config.USE_SYSTEMLED:
+        os.system("modprobe ledtrig_heartbeat")
+        os.system("echo heartbeat >/sys/class/leds/led0/trigger")
+
+    #########################################
+    # MIDI DEVICES DETECTION
+    # MAIN LOOP
+    #########################################
