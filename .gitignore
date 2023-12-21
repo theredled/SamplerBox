@@ -1,6 +1,6 @@
 /samples/
 /build/
-/samplerbox_audio.c*
-/src/test_sounddevice.py
-/src/config.py
+/samplerbox_src/samplerbox_audio.c*
+/samplerbox_src/test_sounddevice.py
+/samplerbox_src/config.py
 /.idea/
