@@ -397,68 +397,68 @@ if config.USE_SERIALPORT_MIDI:
             MidiCallback(message, None)
 
 
-def init():
-    global preset
+#def init():
+#    global preset
     #########################################
     # OPEN AUDIO DEVICE
     #
     #########################################
 
-    try:
-        sd = sounddevice.OutputStream(device=config.AUDIO_DEVICE_ID, blocksize=512, samplerate=44100, channels=2,
-                                      dtype='int16', callback=AudioCallback)
-        sd.start()
-        print('Opened audio device #%i' % config.AUDIO_DEVICE_ID)
-    except:
-        print('Invalid audio device #%i' % config.AUDIO_DEVICE_ID)
-        exit(1)
+try:
+    sd = sounddevice.OutputStream(device=config.AUDIO_DEVICE_ID, blocksize=512, samplerate=44100, channels=2,
+                                  dtype='int16', callback=AudioCallback)
+    sd.start()
+    print('Opened audio device #%i' % config.AUDIO_DEVICE_ID)
+except:
+    print('Invalid audio device #%i' % config.AUDIO_DEVICE_ID)
+    exit(1)
 
-    #########################################
-    # BUTTONS THREAD (RASPBERRY PI GPIO)
-    #
-    #########################################
+#########################################
+# BUTTONS THREAD (RASPBERRY PI GPIO)
+#
+#########################################
 
-    if config.USE_BUTTONS:
-        ButtonsThread = threading.Thread(target=Buttons)
-        ButtonsThread.daemon = True
-        ButtonsThread.start()
+if config.USE_BUTTONS:
+    ButtonsThread = threading.Thread(target=Buttons)
+    ButtonsThread.daemon = True
+    ButtonsThread.start()
 
-    #########################################
-    # 7-SEGMENT DISPLAY
-    #
-    #########################################
+#########################################
+# 7-SEGMENT DISPLAY
+#
+#########################################
 
-    if config.USE_I2C_7SEGMENTDISPLAY:  # requires: 1) i2c-dev in /etc/modules and 2) dtparam=i2c_arm=on in /boot/config.txt
-        display('----')
-        time.sleep(0.5)
+if config.USE_I2C_7SEGMENTDISPLAY:  # requires: 1) i2c-dev in /etc/modules and 2) dtparam=i2c_arm=on in /boot/config.txt
+    display('----')
+    time.sleep(0.5)
 
-    #########################################
-    # MIDI IN via SERIAL PORT
-    #
-    #########################################
+#########################################
+# MIDI IN via SERIAL PORT
+#
+#########################################
 
-    if config.USE_SERIALPORT_MIDI:
-        MidiThread = threading.Thread(target=MidiSerialCallback)
-        MidiThread.daemon = True
-        MidiThread.start()
+if config.USE_SERIALPORT_MIDI:
+    MidiThread = threading.Thread(target=MidiSerialCallback)
+    MidiThread.daemon = True
+    MidiThread.start()
 
-    #########################################
-    # LOAD FIRST SOUNDBANK
-    #
-    #########################################
+#########################################
+# LOAD FIRST SOUNDBANK
+#
+#########################################
 
-    preset = config.DEFAULT_SOUNDBANK
-    LoadSamples()
+preset = config.DEFAULT_SOUNDBANK
+LoadSamples()
 
-    #########################################
-    # SYSTEM LED
-    #
-    #########################################
-    if config.USE_SYSTEMLED:
-        os.system("modprobe ledtrig_heartbeat")
-        os.system("echo heartbeat >/sys/class/leds/led0/trigger")
+#########################################
+# SYSTEM LED
+#
+#########################################
+if config.USE_SYSTEMLED:
+    os.system("modprobe ledtrig_heartbeat")
+    os.system("echo heartbeat >/sys/class/leds/led0/trigger")
 
-    #########################################
-    # MIDI DEVICES DETECTION
-    # MAIN LOOP
-    #########################################
+#########################################
+# MIDI DEVICES DETECTION
+# MAIN LOOP
+#########################################

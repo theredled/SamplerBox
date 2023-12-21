@@ -11,7 +11,7 @@
 import rtmidi, time
 import src.samplerbox as samplerbox
 
-samplerbox.init()
+#samplerbox.init()
 
 midi_in = [rtmidi.MidiIn()]
 previous = []
