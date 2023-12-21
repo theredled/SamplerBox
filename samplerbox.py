@@ -9,7 +9,7 @@
 #
 
 import rtmidi, time
-import src.samplerbox as samplerbox
+import samplerbox_src.samplerbox as samplerbox
 
 samplerbox.init()
 
