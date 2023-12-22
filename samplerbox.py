@@ -5,10 +5,9 @@
 #  url:       http://www.samplerbox.org/
 #  license:   Creative Commons ShareAlike 3.0 (http://creativecommons.org/licenses/by-sa/3.0/)
 #
-#  samplerbox.py: Main file (now requiring at least Python 3.7)
-#
 
-import rtmidi, time
+#  Modified by Benoît Guchet (Python 3.9 etc)
+
 from samplerbox_src.SamplerBox import SamplerBox
 
 sb = SamplerBox()

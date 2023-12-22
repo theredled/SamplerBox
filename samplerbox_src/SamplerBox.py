@@ -47,17 +47,18 @@ class SamplerBox:
         self.displayer = None
 
     def audio_callback(self, outdata, frame_count, time_info, status):
-        rmlist = []
-        self.playing_sounds = self.playing_sounds[-config.MAX_POLYPHONY:]
-        b = samplerbox_audio.mixaudiobuffers(self.playing_sounds, rmlist, frame_count, self.FADEOUT, self.FADEOUTLENGTH,
-                                             self.SPEED)
-        for e in rmlist:
-            try:
+        try:
+            rmlist = []
+            self.playing_sounds = self.playing_sounds[-config.MAX_POLYPHONY:]
+            buffer = samplerbox_audio.mixaudiobuffers(self.playing_sounds, rmlist, frame_count, self.FADEOUT,
+                                                      self.FADEOUTLENGTH,
+                                                      self.SPEED)
+            for e in rmlist:
                 self.playing_sounds.remove(e)
-            except Exception as e:
-                print('exception:', traceback.print_exception(e))
-        b *= self.global_volume
-        outdata[:] = b.reshape(outdata.shape)
+            buffer *= self.global_volume
+            outdata[:] = buffer.reshape(outdata.shape)
+        except Exception as e:
+            print('exception:', traceback.print_exception(e))
 
     def midi_callback(self, message, time_stamp=None):
         try:
@@ -100,7 +101,6 @@ class SamplerBox:
         except Exception as e:
             print('exception:', traceback.print_exception(e))
 
-
     def connect_audio_output(self):
         try:
             sd = sounddevice.OutputStream(device=config.AUDIO_DEVICE_ID, blocksize=512, samplerate=44100, channels=2,
@@ -133,9 +133,13 @@ class SamplerBox:
         self.samples_loader.load_samples()
 
     def init(self):
-        self.connect_audio_output()
+        # -- /!\ Possible strange conflict between samples array / audio callback / OOP
+        # -- https://github.com/spatialaudio/python-sounddevice/issues/513
+        # -- Putting load_samples before connect_audio_output seems to circle this issue.
         self.load_samples()
+        self.connect_audio_output()
         self.connect_midi_input()
+
         if config.USE_SERIALPORT_MIDI:
             spm = SerialPortMidi(self)
             spm.init()
@@ -148,3 +152,4 @@ class SamplerBox:
         if config.USE_SYSTEMLED:
             sl = SystemLed(self)
             sl.init()
+

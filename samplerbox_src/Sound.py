@@ -22,7 +22,7 @@ class Sound:
         wf.close()
 
     def play(self, note):
-        snd = PlayingSound(self, self.samplerbox, note)
+        snd = PlayingSound(self.samplerbox, self, note)
         self.samplerbox.playing_sounds.append(snd)
         return snd
 
