@@ -8,8 +8,9 @@
 
 #  Modified by Benoît Guchet (Python 3.9 etc)
 
-from samplerbox_src.SamplerBox import SamplerBox
+import samplerbox_src.SamplerBox as SamplerBox
 
-sb = SamplerBox()
+#sb = SamplerBox.samplerbox_obj
+sb = SamplerBox.SamplerBox()
 sb.init()
 

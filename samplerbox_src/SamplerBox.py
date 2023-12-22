@@ -34,13 +34,15 @@ class SamplerBox:
         self.FADEOUT = numpy.append(self.FADEOUT, numpy.zeros(self.FADEOUTLENGTH, numpy.float32)).astype(numpy.float32)
         self.SPEED = numpy.power(2, numpy.arange(0.0, 84.0) / 12).astype(numpy.float32)
 
+        self.audio_stream = None
         self.midi_in = []
         self.samples = {}
         self.playing_notes = {}
         self.sustain_playing_notes = []
         self.sustain = False
         self.playing_sounds = []
-        self.global_volume = 10 ** (-12.0 / 20)  # -12dB default global volume
+        # self.global_volume = 10 ** (-12.0 / 20)  # -12dB default global volume
+        self.global_volume = 10 ** (-6.0 / 20)  # -12dB default global volume
         self.global_transpose = 0
         self.preset = config.DEFAULT_SOUNDBANK
         self.samples_loader = SamplesLoader(self)
@@ -103,9 +105,9 @@ class SamplerBox:
 
     def connect_audio_output(self):
         try:
-            sd = sounddevice.OutputStream(device=config.AUDIO_DEVICE_ID, blocksize=512, samplerate=44100, channels=2,
-                                          dtype='int16', callback=self.audio_callback)
-            sd.start()
+            self.audio_stream = sounddevice.OutputStream(device=config.AUDIO_DEVICE_ID, blocksize=512, samplerate=44100,
+                                                         channels=2, dtype='int16', callback=self.audio_callback)
+            self.audio_stream.start()
             print('Opened audio device #%i' % config.AUDIO_DEVICE_ID)
         except:
             print('Invalid audio device #%i' % config.AUDIO_DEVICE_ID)
@@ -152,4 +154,3 @@ class SamplerBox:
         if config.USE_SYSTEMLED:
             sl = SystemLed(self)
             sl.init()
-

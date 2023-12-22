@@ -1,4 +1,7 @@
 import wave
+import traceback
+from chunk import Chunk
+import struct
 
 
 #########################################
@@ -6,17 +9,15 @@ import wave
 # TO READ CUE MARKERS & LOOP MARKERS
 #########################################
 class WaveReader(wave.Wave_read):
-    pass
-
-
-'''
+    '''
     def initfp(self, file):
         self._convert = None
         self._soundpos = 0
         self._cue = []
         self._loops = []
         self._ieee = False
-        self._file = Chunk(file, bigendian=0)
+        self._file = Chunk(file, bigendian=False)
+        #print('wr', self._file); return
         if self._file.getname() != b'RIFF':
             raise IOError('file does not start with RIFF id')
         if self._file.read(4) != b'WAVE':
@@ -26,7 +27,7 @@ class WaveReader(wave.Wave_read):
         while 1:
             self._data_seek_needed = 1
             try:
-                chunk = Chunk(self._file, bigendian=0)
+                chunk = Chunk(self._file, bigendian=False)
             except EOFError as e:
                 print('exception:', traceback.print_exception(e))
             chunkname = chunk.getname()
@@ -59,4 +60,5 @@ class WaveReader(wave.Wave_read):
 
     def getloops(self):
         return self._loops
+
 '''
