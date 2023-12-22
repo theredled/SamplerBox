@@ -9,21 +9,8 @@
 #
 
 import rtmidi, time
-import samplerbox_src.samplerbox as samplerbox
+from samplerbox_src.SamplerBox import SamplerBox
 
-samplerbox.init()
-
-midi_in = [rtmidi.MidiIn()]
-previous = []
-while True:
-    all_ports = midi_in[0].get_ports()
-    for num_port,port in enumerate(all_ports):
-        if port not in previous and 'Midi Through' not in port:
-            midi_in.append(rtmidi.MidiIn())
-            midi_in[-1].set_callback(samplerbox.MidiCallback)
-            midi_in[-1].open_port(num_port)
-            print('Opened MIDI: ' + str(port))
-    previous = all_ports
-    time.sleep(2)
-
+sb = SamplerBox()
+sb.init()
 
