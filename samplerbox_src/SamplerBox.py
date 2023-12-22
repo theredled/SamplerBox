@@ -42,7 +42,7 @@ class SamplerBox:
         self.sustain = False
         self.playing_sounds = []
         # self.global_volume = 10 ** (-12.0 / 20)  # -12dB default global volume
-        self.global_volume = 10 ** (-6.0 / 20)  # -12dB default global volume
+        self.global_volume = 10 ** (-config.DECREASE_VOLUME / 20)  # -12dB default global volume
         self.global_transpose = 0
         self.preset = config.DEFAULT_SOUNDBANK
         self.samples_loader = SamplesLoader(self)
