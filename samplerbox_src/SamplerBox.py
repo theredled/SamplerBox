@@ -135,9 +135,6 @@ class SamplerBox:
         self.samples_loader.load_samples()
 
     def init(self):
-        # -- /!\ Possible strange conflict between samples array / audio callback / OOP
-        # -- https://github.com/spatialaudio/python-sounddevice/issues/513
-        # -- Putting load_samples before connect_audio_output seems to circle this issue.
         self.load_samples()
         self.connect_audio_output()
         self.connect_midi_input()
