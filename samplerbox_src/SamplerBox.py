@@ -64,14 +64,14 @@ class SamplerBox:
 
     def midi_callback(self, message, time_stamp=None):
         try:
-            print('midi cb', message)
+            #print('midi cb', message)
             message = message[0]
             messagetype = message[0] >> 4
             messagechannel = (message[0] & 15) + 1
             note = message[1] if len(message) > 1 else None
             midinote = note
             velocity = message[2] if len(message) > 2 else None
-            print('midi cb type', messagetype)
+            #print('midi cb type', messagetype)
             if messagetype == 9 and velocity == 0:
                 messagetype = 8
             if messagetype == 9:  # Note on
