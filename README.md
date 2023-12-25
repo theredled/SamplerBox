@@ -1,17 +1,13 @@
 FORK NOTES: 
 
-* makes Samplebox compatible with Python 3.9+, including using `python-rtmidi` module instead of `rtmidi-python`.
-* refactored source code for OOP and remote usage
-* no support for loops for the moment.
+* Makes Samplebox compatible with Python 3.9+, including using `python-rtmidi` module instead of `rtmidi-python`.
+* Refactored source code for OOP and remote usage
+* No support for loops for the moment.
+* GPIO buttons, Serial MIDI and 7-degment display are not tested.
 
-Original README:
+Modified README:
 
 # SamplerBox
-
-
-*Update: [Remove drums from song](https://www.yellownoiseaudio.com) with the VST DrumExtract!*
-
-&nbsp;
 
 SamplerBox is an **open-source DIY audio sampler project** based on RaspberryPi.
 
@@ -23,9 +19,7 @@ Website: [www.samplerbox.org](https://www.samplerbox.org)
 
 SamplerBox works with the RaspberryPi's built-in soundcard, but it is recommended to use a USB DAC (PCM2704 USB DAC for less than 10€ on eBay is fine) for better sound quality. 
 
-You can use a ready-to-use ISO image from the [Releases](https://github.com/josephernest/SamplerBox/releases) page or do a manual install:
-
-0. Start with a standard RaspiOS intsall. The following steps have been tested with [2021-05-07-raspios-buster-armhf-lite.zip](https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/2021-05-07-raspios-buster-armhf-lite.zip).
+0. Start with a standard Rasperry PI OS install. The following steps have been tested with Legacy Rasperry Pi OS/Raspbian 11 (Bull's Eye) on RPi 3B
 
 1. Install the required dependencies (Python-related packages and audio libraries - the current version requires at least Python 3.7):
 
@@ -39,7 +33,7 @@ You can use a ready-to-use ISO image from the [Releases](https://github.com/jose
 2. Download SamplerBox and build it with:
 
     ~~~
-    git clone https://github.com/josephernest/SamplerBox.git
+    git clone https://github.com/theredled/SamplerBox.git
     cd SamplerBox
     sudo python3 setup.py build_ext --inplace
     ~~~
@@ -52,37 +46,18 @@ You can use a ready-to-use ISO image from the [Releases](https://github.com/jose
 
     Play some notes on the connected MIDI keyboard, you'll hear some sound!
 
-4. *(Optional)*  Modify `config.py` if you want to change root directory for sample-sets, default soundcard, etc.
+4. *(Optional)*  Modify `samplerbox_src/config.py` if you want to change root directory for sample-sets, default soundcard, etc.
 
 
 # How to use it
 
 See the [FAQ](https://www.samplerbox.org/faq) on https://www.samplerbox.org.
-
-# Notes
-
-A few remarks:
-
-* the current version works on Pi 2, 3, 4 (re-tested on Pi2 & Pi4 on 2022-08-09)
-* the current version also works on Windows if all the required modules are installed
-* MIDI via GPIO/serial should be re-tested with the current version, see https://github.com/josephernest/SamplerBox/issues/49
-* 7-segment display confirmed working as of 2022-08-09, see [requirement](https://github.com/josephernest/SamplerBox/blob/916ae0a5504b0ce757d89e2ece4c65efb60b6d91/samplerbox.py#L361)
-
-# ISO image
-
-The ready-to-use ISO images available on [www.samplerbox.org](https://www.samplerbox.org) are built with the help of a script that can be found in `isoimage/maker.sh`.
+Fork note: Default root directory for sample-sets is now `samples/`
 
 # About
 
-Author : Joseph Ernest (twitter: [@JosephErnest](https:/twitter.com/JosephErnest), mail: [contact@samplerbox.org](mailto:contact@samplerbox.org))
-
-# Sponsors and consulting
-
-I am available for Python, Data science, ML, Automation **consulting**. Please contact me on https://afewthingz.com for freelancing requests.
-
-Do you want to support the development of my open-source projects? Please contact me!
-
-I am currently sponsored by [CodeSigningStore.com](https://codesigningstore.com). Thank you to them for providing a DigiCert Code Signing Certificate and supporting open source software.
+Fork Author : Benoît Guchet (twitter: [@Yoggghourt](https:/twitter.com/yoggghourt), mail: [benoit.guchet@gmail.com](mailto:benoit.guchet@gmail.com))
+Original Author : Joseph Ernest (twitter: [@JosephErnest](https:/twitter.com/JosephErnest), mail: [contact@samplerbox.org](mailto:contact@samplerbox.org))
 
 # License
 
