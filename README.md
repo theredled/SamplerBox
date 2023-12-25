@@ -1,6 +1,7 @@
 FORK NOTES: 
 
 * makes Samplebox compatible with Python 3.9+, including using `python-rtmidi` module instead of `rtmidi-python`.
+* refactored source code for OOP and remote usage
 * no support for loops for the moment.
 
 Original README:
