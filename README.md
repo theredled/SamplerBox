@@ -1,7 +1,7 @@
 FORK NOTE: 
 
 * makes Samplebox compatible with Python 3.9+, including using `python-rtmidi` module instead of `rtmidi-python`.
-
+* no support for loops for the moment.
 
 # SamplerBox
 
